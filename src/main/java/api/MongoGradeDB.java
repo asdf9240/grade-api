@@ -8,7 +8,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class MongoGradeDB implements GradeDB {
     private static final String API_URL = "https://grade-logging-api.chenpan.ca/api/grade";
@@ -190,6 +192,37 @@ public class MongoGradeDB implements GradeDB {
     //       Hint: Read apiDocuments/getMyTeam.md and refer to the above
     //             methods to help you write this code (copy-and-paste + edit as needed).
     public Team getMyTeam() {
-        return null;
+        OkHttpClient client = new OkHttpClient().newBuilder()
+                .build();
+        Request request = new Request.Builder()
+                .url(String.format("https://grade-logging-api.chenpan.ca/team"))
+                .addHeader("Authorization", API_TOKEN)
+                .addHeader("Content-Type", "application/json")
+                .build();
+        try {
+            Response response = client.newCall(request).execute();
+            System.out.println(response);
+            JSONObject responseBody = new JSONObject(response.body().string());
+
+            if (responseBody.getInt("status_code") == 200) {
+                JSONObject team = responseBody.getJSONObject("team");
+
+                JSONArray arr = team.getJSONArray("members");
+                List<String> list = new ArrayList<String>();
+                for(int i = 0; i < arr.length(); i++){
+                    list.add(arr.getString(i));
+                }
+                String[] myArray = new String[list.size()];
+                list.toArray(myArray);
+                return Team.builder()
+                        .members(myArray)
+                        .name(team.getString("name"))
+                        .build();
+            } else {
+                throw new RuntimeException(responseBody.getString("message"));
+            }
+        } catch (IOException | JSONException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
